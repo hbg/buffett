@@ -103,26 +103,49 @@ def _call_claude(user_message: str) -> str:
         messages=[{"role": "user", "content": user_message}],
     )
 
-    # Extract text blocks from the response (skip tool_use / web_search result blocks)
+    # Extract text blocks, joining fragments intelligently
     text_parts = []
     for block in response.content:
         if getattr(block, "type", None) == "text":
             text_parts.append(block.text)
 
-    raw = "\n".join(text_parts)
-    return _clean_citation_artifacts(raw)
+    raw = _join_text_blocks(text_parts)
+    return _clean_response(raw)
 
 
-def _clean_citation_artifacts(text: str) -> str:
-    # Remove web search citation markers like [1], [2], etc.
+def _join_text_blocks(parts: List[str]) -> str:
+    """Join text blocks from web search responses. Fragments that continue a
+    sentence (start with lowercase, punctuation, or conjunctions) get joined
+    with a space instead of a newline to avoid mid-sentence breaks."""
+    if not parts:
+        return ""
+    result = parts[0]
+    for part in parts[1:]:
+        stripped = part.lstrip()
+        if not stripped:
+            continue
+        # Fragment continues a sentence: starts with lowercase, punctuation, or conjunction
+        if stripped[0].islower() or stripped[0] in ";,.:)":
+            result = result.rstrip() + " " + stripped
+        else:
+            result = result + "\n" + part
+    return result
+
+
+def _clean_response(text: str) -> str:
+    # Remove citation markers: [1], [2], etc.
     text = re.sub(r"\[\d+\]", "", text)
-    # Remove orphaned punctuation on its own line (artifacts from citation stripping)
+    # Remove preamble lines (Claude narrating its search process)
+    text = re.sub(
+        r"^.*(I'll search|Let me search|I'll look|Let me look|I'll analyze|Let me analyze|"
+        r"I'll check|Let me check|I'll research|Let me research|searching for|looking up).*$",
+        "", text, flags=re.MULTILINE | re.IGNORECASE,
+    )
+    # Remove orphaned punctuation on its own line
     text = re.sub(r"^\s*[;.,]\s*$", "", text, flags=re.MULTILINE)
-    # Remove trailing orphaned punctuation after a newline: "some text\n."
-    text = re.sub(r"\n\s*([;.,])\s*\n", "\n", text)
-    # Clean up punctuation left dangling at end of a line: "text ."  or "text ;"
-    text = re.sub(r"\s+([;.])\s*$", r"\1", text, flags=re.MULTILINE)
-    # Collapse 3+ consecutive newlines to 2
+    # Join lines where punctuation got stranded at start of next line
+    text = re.sub(r"\n\s*([;,.])\s*", r"\1 ", text)
+    # Collapse 3+ newlines to 2
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
