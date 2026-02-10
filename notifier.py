@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import logging
 import re
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import Optional
 
 from models import Briefing
@@ -62,26 +59,25 @@ def format_briefing_html(briefing: Briefing) -> str:
 
 
 def send_briefing(briefing: Briefing) -> bool:
-    from config import EMAIL_TO, SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_USER
+    import resend
 
-    if not all([SMTP_USER, SMTP_PASSWORD, EMAIL_TO]):
-        logger.warning("SMTP credentials not configured, skipping email")
+    from config import EMAIL_FROM, EMAIL_TO, RESEND_API_KEY
+
+    if not all([RESEND_API_KEY, EMAIL_TO]):
+        logger.warning("Resend credentials not configured, skipping email")
         return False
 
+    resend.api_key = RESEND_API_KEY
     html = format_briefing_html(briefing)
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"Portfolio Briefing — {briefing.date}"
-    msg["From"] = SMTP_USER
-    msg["To"] = EMAIL_TO
-    msg.attach(MIMEText(briefing.content, "plain"))
-    msg.attach(MIMEText(html, "html"))
-
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_USER, EMAIL_TO, msg.as_string())
+        resend.Emails.send({
+            "from": EMAIL_FROM,
+            "to": EMAIL_TO,
+            "subject": f"Portfolio Briefing — {briefing.date}",
+            "html": html,
+            "text": briefing.content,
+        })
         logger.info("Briefing email sent to %s", EMAIL_TO)
         return True
     except Exception:
