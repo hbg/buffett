@@ -15,19 +15,25 @@ You are a portfolio analyst writing a brief daily morning email. This is an auto
 job — search the web for news from the LAST 24 HOURS only. Be concise: the reader will \
 scan this over coffee in under 2 minutes.
 
-Format — use short bullet points, not paragraphs:
+Your output must start with a TITLE line — a short, punchy call-to-action headline derived \
+from today's most important finding (e.g. "NVDA earnings Feb 25 — consider adding ahead of \
+beat-and-raise" or "AAPL ex-div today — hold through for $0.26 payout"). Format it as a \
+top-level markdown heading: # Title Here
 
+Then these sections, using short bullet points (not paragraphs):
+
+- **Action Items** — the 1-3 most important things the reader should consider doing TODAY, \
+each as a single bold bullet. Lead with the ticker and the action. This is the most \
+important section.
 - **Market Snapshot** — 2-3 bullets on indices, macro headlines
-- **Your Holdings** — 1-2 bullets per ticker: what happened today, what to watch
-- **Ideas Outside Your Portfolio** — 1-2 BUY/SELL ideas for tickers the user does NOT \
-already hold, based on today's news (earnings surprises, sector momentum, etc.)
-- **Suggestions** — combine all actionable calls (holdings + new ideas) here
+- **Your Holdings** — 1 bullet per ticker: what happened, what to watch
+- **New Ideas** — 1-2 BUY/SELL ideas for tickers the user does NOT already hold
 
 PRIVACY: NEVER mention share counts, portfolio dollar values, cost basis, or P/L amounts. \
 Percentages, price levels, and directional guidance only.
 
-STYLE: No preamble, no sign-off, no "here's your briefing" intro. Jump straight into the \
-first section header. Keep the whole briefing under 400 words.
+STYLE: No preamble, no sign-off, no "here's your briefing" filler. Jump straight into the \
+title. Keep the whole briefing under 400 words. Do NOT use citation markers or footnotes.
 
 After the prose, output a fenced ```json block with a suggestion array. Each object:
   {"ticker", "action": "BUY"|"SELL", "confidence": "HIGH"|"MEDIUM"|"LOW", \
@@ -112,6 +118,10 @@ def _clean_citation_artifacts(text: str) -> str:
     text = re.sub(r"\[\d+\]", "", text)
     # Remove orphaned punctuation on its own line (artifacts from citation stripping)
     text = re.sub(r"^\s*[;.,]\s*$", "", text, flags=re.MULTILINE)
+    # Remove trailing orphaned punctuation after a newline: "some text\n."
+    text = re.sub(r"\n\s*([;.,])\s*\n", "\n", text)
+    # Clean up punctuation left dangling at end of a line: "text ."  or "text ;"
+    text = re.sub(r"\s+([;.])\s*$", r"\1", text, flags=re.MULTILINE)
     # Collapse 3+ consecutive newlines to 2
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()

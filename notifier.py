@@ -34,28 +34,26 @@ def format_briefing_html(briefing: Briefing) -> str:
     content = re.sub(r"\n\n", "</p><p>", content)
     content = re.sub(r"\n", "<br>", content)
 
-    change_str = ""
-    if briefing.daily_change_pct is not None:
-        color = "#22c55e" if briefing.daily_change_pct >= 0 else "#ef4444"
-        change_str = f' <span style="color:{color}">({briefing.daily_change_pct:+.2f}%)</span>'
-
     return f"""\
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
              max-width: 680px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
-    <div style="border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px;">
-        <h1 style="margin: 0; color: #2563eb;">Portfolio Briefing</h1>
-        <p style="margin: 4px 0 0; color: #666;">{briefing.date}</p>
-    </div>
     <div style="line-height: 1.6;">
-        <p>{content}</p>
+        {content}
     </div>
     <div style="border-top: 1px solid #e5e7eb; margin-top: 24px; padding-top: 12px;
                 font-size: 0.85em; color: #999;">
-        {briefing.suggestion_count} trade suggestion(s) generated &middot; AI Portfolio Advisor
+        {briefing.date} &middot; AI Portfolio Advisor
     </div>
 </body>
 </html>"""
+
+
+def _extract_subject(briefing: Briefing) -> str:
+    match = re.search(r"^#\s+(.+)$", briefing.content, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+    return f"Portfolio Briefing — {briefing.date}"
 
 
 def send_briefing(briefing: Briefing) -> bool:
@@ -69,12 +67,13 @@ def send_briefing(briefing: Briefing) -> bool:
 
     resend.api_key = RESEND_API_KEY
     html = format_briefing_html(briefing)
+    subject = _extract_subject(briefing)
 
     try:
         resend.Emails.send({
             "from": EMAIL_FROM,
             "to": EMAIL_TO,
-            "subject": f"Portfolio Briefing — {briefing.date}",
+            "subject": subject,
             "html": html,
             "text": briefing.content,
         })
