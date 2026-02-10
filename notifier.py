@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 def format_briefing_html(briefing: Briefing) -> str:
     content = briefing.content
 
+    # Horizontal rules
+    content = re.sub(r"^-{3,}$", "<hr>", content, flags=re.MULTILINE)
+
     # Convert markdown headers
     content = re.sub(r"^### (.+)$", r"<h3>\1</h3>", content, flags=re.MULTILINE)
     content = re.sub(r"^## (.+)$", r"<h2>\1</h2>", content, flags=re.MULTILINE)
@@ -23,8 +26,8 @@ def format_briefing_html(briefing: Briefing) -> str:
     # Italic
     content = re.sub(r"\*(.+?)\*", r"<em>\1</em>", content)
 
-    # Bullet lists
-    content = re.sub(r"^- (.+)$", r"<li>\1</li>", content, flags=re.MULTILINE)
+    # Bullet lists (- and • styles)
+    content = re.sub(r"^[-•] (.+)$", r"<li>\1</li>", content, flags=re.MULTILINE)
     content = re.sub(r"(<li>.*?</li>(\n|$))+", _wrap_ul, content)
 
     # Line breaks for remaining plain text

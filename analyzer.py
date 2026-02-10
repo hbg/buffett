@@ -103,7 +103,18 @@ def _call_claude(user_message: str) -> str:
         if getattr(block, "type", None) == "text":
             text_parts.append(block.text)
 
-    return "\n".join(text_parts)
+    raw = "\n".join(text_parts)
+    return _clean_citation_artifacts(raw)
+
+
+def _clean_citation_artifacts(text: str) -> str:
+    # Remove web search citation markers like [1], [2], etc.
+    text = re.sub(r"\[\d+\]", "", text)
+    # Remove orphaned punctuation on its own line (artifacts from citation stripping)
+    text = re.sub(r"^\s*[;.,]\s*$", "", text, flags=re.MULTILINE)
+    # Collapse 3+ consecutive newlines to 2
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def _parse_response(raw: str, prices: Dict[str, PriceData]) -> Tuple[str, List[Suggestion]]:
