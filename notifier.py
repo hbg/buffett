@@ -43,9 +43,6 @@ def format_briefing_html(briefing: Briefing) -> str:
     <div style="border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px;">
         <h1 style="margin: 0; color: #2563eb;">Portfolio Briefing</h1>
         <p style="margin: 4px 0 0; color: #666;">{briefing.date}</p>
-        <p style="margin: 4px 0 0; font-size: 1.2em;">
-            Portfolio Value: <strong>${briefing.portfolio_value:,.2f}</strong>{change_str}
-        </p>
     </div>
     <div style="line-height: 1.6;">
         <p>{content}</p>
